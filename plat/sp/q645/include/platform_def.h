@@ -15,11 +15,10 @@
 
 #define CPU_WAIT_INIT_VAL		0xffffffff
 #define CORE_CPU_START_POS(core_id)	(CORE0_CPU_START_POS - ((core_id) * 8))
-#define CORE3_CPU_START_POS     (0xfa240000 - 0x20)  // core3 wait fa23_ffd0
-#define CORE2_CPU_START_POS     (0xfa240000 - 0x18)  // core2 wait fa23_ffe8
-#define CORE1_CPU_START_POS     (0xfa240000 - 0x10)  // core1 wait fa23_ffe0
-#define CORE0_CPU_START_POS     (0xfa240000 - 0x8)   // core0 wait fa23_fff8
-
+#define CORE3_CPU_START_POS     (0xfa240000 - 0x28)  // core3 wait fa23_ffd8
+#define CORE2_CPU_START_POS     (0xfa240000 - 0x20)  // core2 wait fa23_ffe0
+#define CORE1_CPU_START_POS     (0xfa240000 - 0x18)  // core1 wait fa23_ffe8
+#define CORE0_CPU_START_POS     (0xfa240000 - 0x10)  // core0 wait fa23_fff0
 
 
 /*
