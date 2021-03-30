@@ -12,7 +12,7 @@
 #define SP_DRAM_VIRT_BASE		0x00000000
 
 #define SP_CBSRAM_BASE			0xfa200000
-#define SP_CBSRAM_SIZE			0x00200000 // to save page table?
+#define SP_CBSRAM_SIZE			0x00040000 // to save page table?
 
 /* Memory-mapped devices */
 
