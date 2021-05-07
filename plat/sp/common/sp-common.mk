@@ -35,6 +35,22 @@ BL31_SOURCES		+=	\
 				${SP_PLAT}/common/sp_cpu_ops.c		\
 				${SP_PLAT}/common/sp_topology.c
 
+ifneq ($(filter 1,${ENABLE_PMF} ${ARM_ETHOSN_NPU_DRIVER}),)
+ARM_SVC_HANDLER_SRCS :=
+
+ifeq (${ENABLE_PMF},1)
+ARM_SVC_HANDLER_SRCS	+=	lib/pmf/pmf_smc.c
+endif
+
+ifeq (${ARM_ETHOSN_NPU_DRIVER},1)
+ARM_SVC_HANDLER_SRCS	+=	${SP_PLAT}/common/sp_ethosn_getter.c	\
+							drivers/delay_timer/delay_timer.c		\
+							${SP_PLAT}/common/ethosn_smc.c
+endif
+
+BL31_SOURCES		+=	${SP_PLAT}/common/sp_sip_svc.c			\
+						${ARM_SVC_HANDLER_SRCS}
+endif
 # Have core0~3
 COLD_BOOT_SINGLE_CPU		:=	0
 

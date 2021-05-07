@@ -24,6 +24,8 @@
 #define SP_GICD_BASE			0xfa001000
 #define SP_GICC_BASE			0xfa002000
 
+#define SP_NPU_BASE				0xf8200000
+
 /* macro */
 #define RF_GRP(_grp, _reg)           ((((_grp) * 32 + (_reg)) * 4) + SP_RGST_BASE)
 #define RF_MASK_V(_mask, _val)       (((_mask) << 16) | (_val))
