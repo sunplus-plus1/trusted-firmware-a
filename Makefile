@@ -1007,6 +1007,7 @@ $(eval $(call add_defines,\
         RAS_TRAP_LOWER_EL_ERR_ACCESS \
         COT_DESC_IN_DTB \
         USE_SP804_TIMER \
+        ARM_ETHOSN_NPU_DRIVER \
 )))
 
 ifeq (${SANITIZE_UB},trap)

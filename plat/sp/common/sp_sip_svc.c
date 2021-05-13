@@ -10,7 +10,7 @@
 #include <lib/pmf/pmf.h>
 #include <lib/mmio.h>
 #include <tools_share/uuid.h>
-
+#include "ethosn.h"
 #include "sp_sip_svc.h"
 
 /* SP SiP Service UUID */
@@ -42,6 +42,7 @@ uintptr_t sip_smc_handler(uint32_t smc_fid,
 {
 	uint32_t ns;
 	int call_count = 0;
+
 
 #if ENABLE_PMF
 	/*
