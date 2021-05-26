@@ -1,4 +1,15 @@
+/*
+ * Copyright (c) 2021, Arm Limited. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#ifndef SP_ETHOSN_GETTER_H
+#define SP_ETHOSN_GETTER_H
+
 #include <assert.h>
+
+#include <lib/fconf/fconf.h>
 
 #define hw_config__ethosn_config_getter(prop) ethosn_config.prop
 #define hw_config__ethosn_core_addr_getter(idx) __extension__ ({	\
@@ -17,5 +28,8 @@ struct ethosn_config_t {
 	uint64_t core_addr[ETHOSN_CORE_NUM_MAX];
 };
 
+int fconf_populate_arm_ethosn(uintptr_t config);
 
 extern struct ethosn_config_t ethosn_config;
+
+#endif /* SP_ETHOSN_GETTER_H */

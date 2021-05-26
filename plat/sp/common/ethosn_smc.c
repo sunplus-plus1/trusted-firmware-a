@@ -86,11 +86,44 @@ static bool ethosn_reset(uintptr_t core_addr, int hard_reset)
 	const uint32_t reset_val = (hard_reset != 0) ? SEC_SYSCTRL0_HARD_RESET
 						    : SEC_SYSCTRL0_SOFT_RESET;
 
-	mmio_write_32(sysctrl0_reg, reset_val);
+    //dump wave form
+	//mmio_write_32(0xF8000000, 0xabcd1234);
+
+#if 0//debug 
+	NOTICE("SEC_DEL_REG:f8200004:(%x)\n",mmio_read_32(ETHOSN_CORE_SEC_REG(ETHOSN_CORE_ADDR(0), SEC_DEL_REG)));
+	NOTICE("sysctrl0_reg_adr:(%lx) reset_val: (%x)\n",sysctrl0_reg,reset_val);
+	NOTICE("sysctrl0_reg:(%x)\n",mmio_read_32(sysctrl0_reg));
+	//NOTICE("0xF821F000-NPUID:(%x)\n",mmio_read_32(0xF821F000));
+	NOTICE("sysctrl0_DL1_reg:(%x)\n",mmio_read_32(0xF8210018));
+	//NOTICE("0xF821F004-UNIT_COUNT:(%x)\n",mmio_read_32(0xF821F004));
+	//NOTICE("0xF821F008-MCE-FEATURE:(%x)\n",mmio_read_32(0xF821F008));
+	//mmio_write_32(0xF8210018, 0x60000000);
+	//NOTICE("sysctrl0_DL1_reg:(%x)\n",mmio_read_32(0xF8210018));
+	//NOTICE("0xF821F00C-DFC-FEATURE:(%x)\n",mmio_read_32(0xF821F00C));
+
+    NOTICE("HW sec control(0xF80001E0):(%x)\n",mmio_read_32(0xF80001E0));//mon hw sec n78:bit29,bit13
+	NOTICE("HW sec control(0xF80029E8):(%x)\n",mmio_read_32(0xF80029E8));//mon hw sec n78:bit9,bit1
+#endif
+	mmio_write_32(sysctrl0_reg, reset_val);//n78 sw reset
+
+#if 1//reset work arround
+	udelay(1);
+    NOTICE("HW reset control(0xF800005C):(%x)\n",mmio_read_32(0xF800005C));
+	mmio_write_32(0xF800005C, 1|(1<<16));//moon N78 reset
+	udelay(1);
+	NOTICE("HW reset control(0xF800005C):(%x)\n",mmio_read_32(0xF800005C));
+	mmio_write_32(0xF800005C, 0|(1<<16));
+	udelay(1);	
+	NOTICE("HW reset control(0xF800005C):(%x)\n",mmio_read_32(0xF800005C));	
+
+	//NOTICE("after swreset\n");
+	//NOTICE("0xF821F000-NPUID:(%x)\n",mmio_read_32(0xF821F000));
+	//NOTICE("after swreset1\n");
+#endif
 
 	/* Wait for reset to complete */
 	for (timeout = 0U; timeout < ETHOSN_RESET_TIMEOUT_US;
-			   timeout = ETHOSN_RESET_WAIT_US) {
+			   timeout += ETHOSN_RESET_WAIT_US) {
 
 		if ((mmio_read_32(sysctrl0_reg) & reset_val) == 0U) {
 			break;
