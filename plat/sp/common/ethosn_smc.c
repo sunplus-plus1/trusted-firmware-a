@@ -104,9 +104,41 @@ static bool ethosn_reset(uintptr_t core_addr, int hard_reset)
     NOTICE("HW sec control(0xF80001E0):(%x)\n",mmio_read_32(0xF80001E0));//mon hw sec n78:bit29,bit13
 	NOTICE("HW sec control(0xF80029E8):(%x)\n",mmio_read_32(0xF80029E8));//mon hw sec n78:bit9,bit1
 #endif
+#if 1//enable HW auto reset
+    NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
+    mmio_write_32(0xF8000164, 0x2000|(0x2000<<16));//HW auto reset enable (bit13)
+    udelay(1);
+	NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
+#endif
+
 	mmio_write_32(sysctrl0_reg, reset_val);//n78 sw reset
 
-#if 1//reset work arround
+	NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
+
+#if 0//enable SW monitor reset
+	/* Wait for N78 resetreq(0xF8000164.bit12 to be 1. then it can reset N78 manually with Moon N78 reset reg (0xF800005C.0) */
+	for (timeout = 0U; timeout < ETHOSN_RESET_TIMEOUT_US;
+			   timeout += ETHOSN_RESET_WAIT_US) {
+
+		if ((mmio_read_32(0xF8000164) & 0x1000) == 0x1000) {
+			break;
+		}
+
+		udelay(ETHOSN_RESET_WAIT_US);
+	}    
+
+	if (timeout >= ETHOSN_RESET_TIMEOUT_US){
+        return 0;
+	}
+
+	mmio_write_32(0xF800005C, 1|(1<<16));//Enable moon N78 reset
+	udelay(1);
+	mmio_write_32(0xF800005C, 0|(1<<16));//Reset N78 and disable moon N78 reset
+    udelay(1);
+	NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
+#endif
+
+#if 0//reset work arround
 	udelay(1);
     NOTICE("HW reset control(0xF800005C):(%x)\n",mmio_read_32(0xF800005C));
 	mmio_write_32(0xF800005C, 1|(1<<16));//moon N78 reset
