@@ -38,7 +38,7 @@
 #define BL31_BASE				0x200000 /* @ 2MB */
 #define BL31_LIMIT				(BL31_BASE + 0x100000)
 
-#define SP_LINUX_DTB_OFFSET		(SP_DRAM_BASE + 0x400000)  /* dtb @ 4MB */
+#define SP_LINUX_DTB_OFFSET		(SP_DRAM_BASE + 0x3f0000)  /* dtb @ 4MB */
 #define PLAT_SP_NS_IMAGE_OFFSET	(SP_DRAM_BASE + 0x300040) /* uboot @ 3MB+64 */
 
 
