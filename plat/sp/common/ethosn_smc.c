@@ -112,7 +112,7 @@ static bool ethosn_reset(uintptr_t core_addr, int hard_reset)
 	//NOTICE("0xF821F00C-DFC-FEATURE:(%x)\n",mmio_read_32(0xF821F00C));
 
     NOTICE("HW sec control(0xF80001E0):(%x)\n",mmio_read_32(0xF80001E0));//mon hw sec n78:bit29,bit13
-	NOTICE("HW sec control(0xF80029E8):(%x)\n",mmio_read_32(0xF80029E8));//mon hw sec n78:bit9,bit1
+    NOTICE("HW sec control(0xF80029E8):(%x)\n",mmio_read_32(0xF80029E8));//mon hw sec n78:bit9,bit1
 #endif
 #if 1//enable HW auto reset
     //NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
@@ -122,7 +122,7 @@ static bool ethosn_reset(uintptr_t core_addr, int hard_reset)
 #endif
 
 	mmio_write_32(sysctrl0_reg, reset_val);//n78 sw reset
-
+	udelay(1);
 	//NOTICE("HW reset control(0xF8000164):(%x)\n",mmio_read_32(0xF8000164));
 
 #if 0//enable SW monitor reset
