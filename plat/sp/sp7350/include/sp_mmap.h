@@ -22,7 +22,7 @@
 #define SP_AO_RGST_BASE			0xf8800000
 
 
-#define SP_UART0_BASE			0xf8800180
+#define SP_UART0_BASE			0xf8801900
 
 #define SP_GICD_BASE			0xfa001000
 #define SP_GICC_BASE			0xfa002000
