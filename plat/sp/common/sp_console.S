@@ -24,7 +24,19 @@ func sp_console_putc
 0:	ldr	w2, [x1, #SP_UA_LSR_OFF]
 	tbz	w2, #SP_UART_LSR_TX_SHIFT, 0b
 
-	str	w0, [x1, #SP_UA_DR_OFF]
+	/* Check if current character is a '\n' */
+	cmp	w0, #10
+	bne	2f
+
+	/* Put an extra character '\r' */
+	mov	w2, #13
+	str	w2, [x1, #SP_UA_DR_OFF]
+
+	/* Wait until tx fifo not full */
+1:	ldr	w2, [x1, #SP_UA_LSR_OFF]
+	tbz	w2, #SP_UART_LSR_TX_SHIFT, 1b
+
+2:	str	w0, [x1, #SP_UA_DR_OFF]
 
 	ret
 endfunc sp_console_putc
