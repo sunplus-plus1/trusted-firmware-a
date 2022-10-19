@@ -20,7 +20,10 @@
 #define CORE1_CPU_START_POS    	 	(0xfa23fc00 - 0x18)  // core1 wait fa23_fbe8
 #define CORE0_CPU_START_POS     	(0xfa23fc00 - 0x10)  // core0 wait fa23_fbf0
 
-
+#define PLAT_SP_HOLD_BASE		    (CORE0_CPU_START_POS) //from CPU0~CPU3
+#define PLAT_SP_HOLD_SIZE		    (PLATFORM_CORE_COUNT * 8)
+#define PLAT_SP_HOLD_STATE_WAIT		(0)
+#define PLAT_SP_HOLD_STATE_GO		(1)
 /*
  * DRAM
  *   Secure :   0 ~   4MB
@@ -66,6 +69,16 @@
 #define PLAT_MAX_OFF_STATE		U(2)
 #define PLAT_MAX_PWR_LVL		U(2) /* See plat/sp/common/sp_topology.c */
 #define PLAT_NUM_PWR_DOMAINS		(U(1) + PLATFORM_CLUSTER_COUNT + PLATFORM_CORE_COUNT)
+
+/* Local power state for power domains in Run state. */
+#define PLAT_LOCAL_STATE_RUN		0
+/* Local power state for retention. Valid only for CPU power domains */
+#define PLAT_LOCAL_STATE_RET		1
+/*
+ * Local power state for OFF/power-down. Valid for CPU and cluster power
+ * domains.
+ */
+#define PLAT_LOCAL_STATE_OFF		2
 
 /* cores */
 #define PLATFORM_CLUSTER_COUNT		U(1)
