@@ -10,7 +10,7 @@ static const unsigned char plat_power_domain_tree_desc[PLAT_MAX_PWR_LVL + 1] = {
 	/* One set of CPUs per cluster */
 	PLATFORM_MAX_CPUS_PER_CLUSTER,
 };
-#include "stdio.h"
+
 int plat_core_pos_by_mpidr(u_register_t mpidr)
 {
 	unsigned int cluster_id, cpu_id;
@@ -32,7 +32,6 @@ int plat_core_pos_by_mpidr(u_register_t mpidr)
 	if (cpu_id >= PLATFORM_MAX_CPUS_PER_CLUSTER)
 		return -1;
 
-	printf("\n mpidr = %lx \n",mpidr);
 	return (cpu_id + (cluster_id * 4));
 
 }
