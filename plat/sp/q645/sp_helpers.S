@@ -8,6 +8,7 @@
 #include <asm_macros.S>
 #include <common/bl_common.h>
 #include <platform_def.h>
+	.globl	sp_sec_entry_point
 
 	.globl  plat_my_core_pos
 	.globl	plat_get_my_entrypoint
@@ -26,8 +27,24 @@ endfunc plat_my_core_pos
  * -----------------------------------------------------------------------
  */
 func plat_get_my_entrypoint
+
+	mov	x1, x30
+	bl	plat_is_my_cpu_primary
+	/*
+	 * Secondaries always cold boot.
+	*/
+	cbz	w0, 1f
+
+	adr	x0, sp_sec_entry_point
+	ldr	x0, [x0]
+
+	ret x1
+
+1:
 	mov	x0, #0
-	ret
+	ret	x1
+
+
 endfunc plat_get_my_entrypoint
 
 /* -----------------------------------------------------------------------
@@ -35,39 +52,32 @@ endfunc plat_get_my_entrypoint
  * -----------------------------------------------------------------------
  */
 func plat_secondary_cold_boot_setup
-	/*
-	 * Poll the CPU's hold entry until it indicates to jump
-	 * to the entrypoint address.
-	 */
+
 	bl	plat_my_core_pos
 
-	/* x0 = 0~3 (core #) */
-	mov	x1, #CPU_WAIT_INIT_VAL
-	mov	x2, #0
-	mov	x3, #0
-	mov	x4, #0
-
-	ldr	w2, =CORE0_CPU_START_POS
+	mov_imm	x2, PLAT_SP_HOLD_BASE
 	sub	x2, x2, x0, LSL #3	/* core wait address = x2 - (core * 8) */
-	str	w1, [x2]		/* w2 = init */
-	dsb	sy
-poll_hold_entry:
-	ldr	w3, [x2]		/* wait until x2 is changed */
-	cmp	w3, w1
-	b.eq	1f
-	ldr	w4, =bl31_warm_entrypoint
-#if 1 // stamp given pc
-	mov     x21, #0
-	ldr     w21, =0xf8000000
-	ldr	w22, =0x12345001
-	str     w22, [x21]
-	str     w3, [x21]
-#endif
-	br	x4
-1:
+	/*
+	 * This code runs way before requesting the warmboot of this core,
+	 * so it is possible to clear the mailbox before getting a request
+	 * to boot.
+	 */
+	mov	x1, PLAT_SP_HOLD_STATE_WAIT  /* set 0 to core1~core3 pos*/
+	str	x1,[x2]
+
+poll_mailbox:
 	wfe
-	b	poll_hold_entry
-endfunc plat_secondary_cold_boot_setup
+	ldr	x1, [x2]
+	cmp	x1, PLAT_SP_HOLD_STATE_GO  /* wait sp_pwr_on to set 1 to core pos */
+	bne	poll_mailbox
+
+	/* Jump to the provided entrypoint */
+	adr	x0, sp_sec_entry_point
+	ldr	x1, [x0]
+
+	br	x1
+
+endfunc	plat_secondary_cold_boot_setup
 
 /* -----------------------------------------------------------------------
  * unsigned int plat_is_my_cpu_primary (void);
@@ -82,3 +92,14 @@ func plat_is_my_cpu_primary
 	cset	x0, eq		/* set 1 for primary, and set 0 for others */
 	ret	x9
 endfunc plat_is_my_cpu_primary
+
+	.data
+	.align 3
+
+	/* --------------------------------------------------
+	 * CPU Secure entry point - resume from suspend
+	 * --------------------------------------------------
+	 */
+sp_sec_entry_point:
+	.quad	0
+

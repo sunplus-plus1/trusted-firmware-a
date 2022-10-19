@@ -131,10 +131,10 @@ void bl31_platform_setup(void)
 
 void bl31_plat_runtime_setup(void)
 {
+#ifdef SMP_USE_SPIN_TABLE
 	int i;
 
 	VERBOSE("BL31: RT setup\n");
-
 	/* Init smp states.
 	 * Refer to psci_set_aff_info_state_by_idx(i, AFF_STATE_ON);
 	 */
@@ -142,6 +142,7 @@ void bl31_plat_runtime_setup(void)
 		set_cpu_data_by_index(i, psci_svc_cpu_data.aff_info_state, AFF_STATE_ON_PENDING);
 		flush_cpu_data_by_index(i, psci_svc_cpu_data.aff_info_state);
 	}
+#endif	
 }
 
 entry_point_info_t *bl31_plat_get_next_image_ep_info(uint32_t type)

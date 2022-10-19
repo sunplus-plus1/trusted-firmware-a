@@ -10,6 +10,8 @@
 /* Memory regions */
 #define SP_DRAM_BASE			0x00000000
 #define SP_DRAM_VIRT_BASE		0x00000000
+#define SP_DRAM_SIZE			0x80000000
+
 
 #define SP_CBSRAM_BASE			0xfa200000
 #define SP_CBSRAM_SIZE			0x00040000 // to save page table?
@@ -31,5 +33,7 @@
 #define RF_MASK_V(_mask, _val)       (((_mask) << 16) | (_val))
 #define RF_MASK_V_SET(_mask)         (((_mask) << 16) | (_mask))
 #define RF_MASK_V_CLR(_mask)         (((_mask) << 16) | 0)
+
+#define SP_MAILBOX_CA55_TO_M4_IRQ0   RF_GRP(258,24)
 
 #endif /* SP_MMAP_H */
