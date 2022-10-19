@@ -20,67 +20,96 @@
 #include <lib/libc/errno.h>
 #include <lib/el3_runtime/context_mgmt.h>
 
-static entry_point_info_t next_ep_info[PLATFORM_CORE_COUNT];
+#include <sp_pm.h>
+
+extern uint64_t sp_sec_entry_point;
+
+#define SP_CORE_PWR_STATE(state) 	((state)->pwr_domain_state[MPIDR_AFFLVL0])
+#define SP_CLUSTER_PWR_STATE(state)	((state)->pwr_domain_state[MPIDR_AFFLVL1])
+#define SP_SYSTEM_PWR_STATE(state)	((state)->pwr_domain_state[PLAT_MAX_PWR_LVL])
+
+static void sp_platform_save_context(unsigned long mpidr)
+{
+	reg_data *save_data; 
+	/* save secure register,restore in warmboot xboot !! */
+	save_data = (reg_data *)PMC_SAVE_DATA_BASE;
+
+	memcpy((void *)save_data->reg_Sec_Group,(void *)RGST_SECURE_REG, sizeof(uint32_t)*32);
+	memcpy((void *)save_data->reg_Sec_Main, (void *)SECGRP1_MAIN_REG,sizeof(uint32_t)*32);
+	memcpy((void *)save_data->reg_Sec_PAI,  (void *)SECGRP1_PAI_REG, sizeof(uint32_t)*32);
+	memcpy((void *)save_data->reg_Sec_PAII, (void *)SECGRP1_PAII_REG,sizeof(uint32_t)*32);
+}
+
+static void sp_platform_restore_context(unsigned long mpidr)
+{
+
+}
+
+static int sp_pwr_domain_on(u_register_t mpidr)
+{
+	int rc = PSCI_E_SUCCESS;
+	unsigned int pos = plat_core_pos_by_mpidr(mpidr);
+	uintptr_t hold_base = PLAT_SP_HOLD_BASE;
+
+	assert(pos < PLATFORM_CORE_COUNT);
+	hold_base -= pos * 8;
+	mmio_write_64(hold_base, PLAT_SP_HOLD_STATE_GO);
+	/* No cache maintenance here, hold_base is mapped as device memory. */
+	flush_dcache_range((uintptr_t)PLAT_SP_HOLD_BASE,PLAT_SP_HOLD_SIZE);
+
+	dsb();
+	isb();
+	sev();
+
+	return rc;
+}
+
+
+static void sp_pwr_domain_off(const psci_power_state_t *target_state)
+{
+	/* set core/cluster power down in CM4*/
+	assert(SP_CORE_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE);
+
+	gicv2_cpuif_disable();
+}
 
 static void sp_pwr_domain_on_finish(const psci_power_state_t *target_state)
 {
-	int coreid;
-	entry_point_info_t *ep;
-	uint32_t next_pc; /* phy addr < 4GB in this IC */
 
-	coreid = plat_my_core_pos();
+	assert(target_state->pwr_domain_state[MPIDR_AFFLVL0] == PLAT_LOCAL_STATE_OFF);
+	gicv2_pcpu_distif_init();
+	gicv2_cpuif_enable();
 
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca00);
-	mmio_write_32(SP_RGST_BASE, coreid);
-
-	if (coreid >= PLATFORM_CORE_COUNT) {
-		return ; /* not support */
-	}
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca01);
-	next_pc = mmio_read_32(CORE_CPU_START_POS(coreid)); // =secondary_holding_pen
-	mmio_write_32(SP_RGST_BASE, (uint32_t)next_pc);
-
-	ep = &next_ep_info[coreid];
-
-	/* setup for NS gic. Refer to optee gic_cpu_init() */
-	/* per-CPU interrupts config:
-	 * ID0-ID7(SGI)   for Non-secure interrupts
-	 * ID8-ID15(SGI)  for Secure interrupts.
-	 * All PPI config as Non-secure interrupts.
-	 */
-	mmio_write_32(SP_GICD_BASE + GICD_IGROUPR, 0xffff00ff);
-
-	mmio_write_32(SP_GICC_BASE + GICC_PMR, 0x80);
-
-	/* enable G0 and G1 */
-	mmio_write_32(SP_GICC_BASE + GICC_CTLR, FIQ_EN_BIT | CTLR_ENABLE_G0_BIT | CTLR_ENABLE_G1_BIT);
-
-	/* Populate entry point information for this core */
-	SET_PARAM_HEAD(ep, PARAM_EP, VERSION_1, 0);
-	ep->pc = next_pc;
-	ep->spsr = SPSR_64(MODE_EL2, MODE_SP_ELX, DISABLE_ALL_EXCEPTIONS);
-	ep->args.arg0 = (u_register_t)SP_LINUX_DTB_OFFSET;
-	ep->args.arg1 = 0ULL;
-	ep->args.arg2 = 0ULL;
-	ep->args.arg3 = 0ULL;
-	SET_SECURITY_STATE(ep->h.attr, NON_SECURE);
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca02);
-	cm_init_my_context(ep);
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca09);
-	mmio_write_32(SP_RGST_BASE, (uint32_t)coreid);
 }
+void __dead2 plat_secondary_cold_boot_setup(void);
 
 static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 {
+	unsigned int pos = plat_my_core_pos();
 	sp_cpu_off(read_mpidr());
 
-	/* coverity[no_escape] */
-	while (1) {
-		wfi();
+	dcsw_op_all(DCCISW); //flush cache
+
+	if (pos == 0)
+	{
+		/* for suspend to ram: all of core wfi here, then send msg to CM4 to power down main domain */
+		/* for others: core0 should off/reset other core */
+		send_upf_msg_to_cm4();
 	}
+
+	//write_rmr_el3(RMR_EL3_RR_BIT | RMR_EL3_AA64_BIT); //for warm reset test
+
+	dsb();
+	asm volatile ("msr S3_0_C15_C2_7 ,%0" :: "r" (0x1));
+	isb();
+
+	while (1)
+	{
+		asm volatile ("wfi");
+	}
+
+	panic();
+
 }
 
 static void __dead2 sp_system_off(void)
@@ -104,35 +133,159 @@ static void __dead2 sp_system_reset(void)
 {
 	gicv2_cpuif_disable();
 
-	NOTICE("%s: L#%d\n", __func__, __LINE__);
+	console_flush();
 
-	mmio_write_32(SP_RGST_BASE + 0x100, RF_MASK_V_SET(1 << 0)); /* G2.0[0] */
+	mmio_write_32(SP_AO_RGST_BASE + 0x4, RF_MASK_V_SET(1 << 0)); /* G0.1[0] */
 
+	mmio_write_32(SP_WDG_ENABLE,0x0600); /* enable watedog reset */
+
+	/* STC: watchdog control */
+	mmio_write_32(SP_WDG_CTRL,0x3877);
+	mmio_write_32(SP_WDG_CTRL,0xAB00);
+	mmio_write_32(SP_WDG_CNT,0x0001);
+	mmio_write_32(SP_WDG_CTRL,0x4A4B);
+
+	dsbsy();
+	isb();
 	/* Wait before panicking */
 	mdelay(1000);
 
-	ERROR("%s: reset failed\n", __func__);
+	wfi();
+	ERROR("System Reset: operation not handled.\n");
+	panic();
 
-	/* coverity[no_escape] */
-	while (1) {
-		wfi();
+}
+
+static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
+{
+	unsigned long mpidr = read_mpidr_el1();
+
+	if (SP_CORE_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
+		return;
+
+	sp_platform_save_context(mpidr);
+	/* Prevent interrupts from spuriously waking up this cpu */
+	gicv2_cpuif_disable();
+
+}
+
+static void sp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
+{
+	unsigned long mpidr = read_mpidr_el1();
+
+	if (is_local_state_off(SP_SYSTEM_PWR_STATE(target_state)))
+		gicv2_distif_init();
+	if (is_local_state_off(SP_CORE_PWR_STATE(target_state))) {
+		gicv2_pcpu_distif_init();
+		gicv2_cpuif_enable();
 	}
+	sp_platform_restore_context(mpidr);
+}
+
+/*******************************************************************************
+ * This handler is called by the PSCI implementation during the `SYSTEM_SUSPEND`
+ * call to get the `power_state` parameter. This allows the platform to encode
+ * the appropriate State-ID field within the `power_state` parameter which can
+ * be utilized in `pwr_domain_suspend()` to suspend to system affinity level.
+******************************************************************************/
+static void sp_get_sys_suspend_power_state(psci_power_state_t *req_state)
+{
+	int i;
+
+	/* all affinities use system suspend state id */
+	for (i = MPIDR_AFFLVL0; i <= PLAT_MAX_PWR_LVL; i++)
+		req_state->pwr_domain_state[i] = PLAT_MAX_OFF_STATE;
+}
+
+static void sp_cpu_standby(plat_local_state_t cpu_state)
+{
+	u_register_t scr;
+
+	scr = read_scr_el3();
+	/* Enable PhysicalIRQ bit for NS world to wake the CPU */
+	write_scr_el3(scr | SCR_IRQ_BIT);
+	isb();
+	dsb();
+	wfi();
+	write_scr_el3(scr);
 }
 
 
+void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
+{
+
+}
+
+ int32_t sp_validate_power_state(uint32_t power_state,
+				   psci_power_state_t *req_state)
+{
+
+	int i;
+	int pstate = psci_get_pstate_type(power_state);
+	int pwr_lvl = psci_get_pstate_pwrlvl(power_state);
+
+	assert(req_state);
+
+	if (pwr_lvl > PLAT_MAX_PWR_LVL)
+		return PSCI_E_INVALID_PARAMS;
+
+	if (pstate == PSTATE_TYPE_STANDBY) {
+		/*
+		 * It's possible to enter standby only on power level 0
+		 * Ignore any other power level.
+		 */
+		if (pwr_lvl != MPIDR_AFFLVL0)
+			return PSCI_E_INVALID_PARAMS;
+
+		req_state->pwr_domain_state[MPIDR_AFFLVL0] = PLAT_LOCAL_STATE_RET;
+	} else {
+		for (i = MPIDR_AFFLVL0; i <= pwr_lvl; i++)
+			req_state->pwr_domain_state[i] = PLAT_LOCAL_STATE_OFF;
+	}
+
+	/*
+	 * We expect the 'state id' to be zero.
+	 */
+	if (psci_get_pstate_id(power_state))
+		return PSCI_E_INVALID_PARAMS;
+
+	return PSCI_E_SUCCESS;
+}
+
+static int32_t sp_validate_ns_entrypoint(uintptr_t entrypoint)
+{
+
+	if ((entrypoint > SP_DRAM_BASE) && (entrypoint < (SP_DRAM_BASE + SP_DRAM_SIZE)))
+	   return PSCI_E_SUCCESS;
+
+	return PSCI_E_INVALID_ADDRESS;
+}
+
 static plat_psci_ops_t sp_psci_ops = {
-	.system_off			= sp_system_off,
-	.system_reset			= sp_system_reset,
+	.cpu_standby			    = sp_cpu_standby,
+	.pwr_domain_on			    = sp_pwr_domain_on,
+	.pwr_domain_off			    = sp_pwr_domain_off,
+	.pwr_domain_suspend		    = sp_pwr_domain_suspend,
+	.pwr_domain_suspend_finish	= sp_pwr_domain_suspend_finish,
+	.validate_power_state		= sp_validate_power_state,
+	.validate_ns_entrypoint		= sp_validate_ns_entrypoint,
+	.get_sys_suspend_power_state	= sp_get_sys_suspend_power_state,
+
+	.system_off			        = sp_system_off,
+	.system_reset			    = sp_system_reset,
 	.pwr_domain_on_finish		= sp_pwr_domain_on_finish,
 	.pwr_domain_pwr_down_wfi	= sp_pwr_down_wfi,
 };
 
+
 int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 			const plat_psci_ops_t **psci_ops)
 {
+	NOTICE("PSCI: %s\n", __func__);
+
 	assert(psci_ops);
 
-	NOTICE("PSCI: %s\n", __func__);
+	sp_sec_entry_point = sec_entrypoint;
 
 	*psci_ops = &sp_psci_ops;
 

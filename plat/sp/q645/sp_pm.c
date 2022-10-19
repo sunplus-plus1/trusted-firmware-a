@@ -28,7 +28,6 @@
 
 static int sp_pwr_domain_on(u_register_t mpidr)
 {
-
 	int rc = PSCI_E_SUCCESS;
 	unsigned int pos = plat_core_pos_by_mpidr(mpidr);
 	uintptr_t hold_base = PLAT_SP_HOLD_BASE;
@@ -43,75 +42,20 @@ static int sp_pwr_domain_on(u_register_t mpidr)
 	dsb();
 	isb();
 	sev();
-
 	return rc;
 }
 static void sp_pwr_domain_on_finish(const psci_power_state_t *target_state)
 {
-#ifndef SMP_USE_SPIN_TABLE
 	assert(target_state->pwr_domain_state[MPIDR_AFFLVL0] == PLAT_LOCAL_STATE_OFF);
 	gicv2_pcpu_distif_init();
 	gicv2_cpuif_enable();
-
-#else	
-	int coreid;
-	entry_point_info_t *ep;
-	uint32_t next_pc; /* phy addr < 4GB in this IC */
-
-	coreid = plat_my_core_pos();
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca00);
-	mmio_write_32(SP_RGST_BASE, coreid);
-
-	if (coreid >= PLATFORM_CORE_COUNT) {
-		return ; /* not support */
-	}
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca01);
-	next_pc = mmio_read_32(CORE_CPU_START_POS(coreid)); // =secondary_holding_pen
-	mmio_write_32(SP_RGST_BASE, (uint32_t)next_pc);
-
-	ep = &next_ep_info[coreid];
-
-	/* setup for NS gic. Refer to optee gic_cpu_init() */
-	/* per-CPU interrupts config:
-	 * ID0-ID7(SGI)   for Non-secure interrupts
-	 * ID8-ID15(SGI)  for Secure interrupts.
-	 * All PPI config as Non-secure interrupts.
-	 */
-	mmio_write_32(SP_GICD_BASE + GICD_IGROUPR, 0xffff00ff);
-
-	mmio_write_32(SP_GICC_BASE + GICC_PMR, 0x80);
-
-	/* enable G0 and G1 */
-	mmio_write_32(SP_GICC_BASE + GICC_CTLR, FIQ_EN_BIT | CTLR_ENABLE_G0_BIT | CTLR_ENABLE_G1_BIT);
-
-	/* Populate entry point information for this core */
-	SET_PARAM_HEAD(ep, PARAM_EP, VERSION_1, 0);
-	ep->pc = next_pc;
-	ep->spsr = SPSR_64(MODE_EL2, MODE_SP_ELX, DISABLE_ALL_EXCEPTIONS);
-	ep->args.arg0 = (u_register_t)SP_LINUX_DTB_OFFSET;
-	ep->args.arg1 = 0ULL;
-	ep->args.arg2 = 0ULL;
-	ep->args.arg3 = 0ULL;
-	SET_SECURITY_STATE(ep->h.attr, NON_SECURE);
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca02);
-	cm_init_my_context(ep);
-
-	mmio_write_32(SP_RGST_BASE, (uint32_t)0xb131ca09);
-	mmio_write_32(SP_RGST_BASE, (uint32_t)coreid);
-#endif
 }
+void __dead2 plat_secondary_cold_boot_setup(void);
 
 static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 {
-	sp_cpu_off(read_mpidr());
-
-	/* coverity[no_escape] */
-	while (1) {
-		wfi();
-	}
+	dcsw_op_all(DCCISW); //flush cache
+	plat_secondary_cold_boot_setup();
 }
 
 static void __dead2 sp_system_off(void)
