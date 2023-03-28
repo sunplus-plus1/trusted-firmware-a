@@ -28,22 +28,10 @@ extern uint64_t sp_sec_entry_point;
 #define SP_CLUSTER_PWR_STATE(state)	((state)->pwr_domain_state[MPIDR_AFFLVL1])
 #define SP_SYSTEM_PWR_STATE(state)	((state)->pwr_domain_state[PLAT_MAX_PWR_LVL])
 
-static void sp_platform_save_context(unsigned long mpidr)
-{
-	reg_data *save_data; 
 	/* save secure register,restore in warmboot xboot !! */
-	save_data = (reg_data *)PMC_SAVE_DATA_BASE;
 
-	memcpy((void *)save_data->reg_Sec_Group,(void *)RGST_SECURE_REG, sizeof(uint32_t)*32);
-	memcpy((void *)save_data->reg_Sec_Main, (void *)SECGRP1_MAIN_REG,sizeof(uint32_t)*32);
-	memcpy((void *)save_data->reg_Sec_PAI,  (void *)SECGRP1_PAI_REG, sizeof(uint32_t)*32);
-	memcpy((void *)save_data->reg_Sec_PAII, (void *)SECGRP1_PAII_REG,sizeof(uint32_t)*32);
-}
 
-static void sp_platform_restore_context(unsigned long mpidr)
-{
 
-}
 
 static int sp_pwr_domain_on(u_register_t mpidr)
 {
@@ -158,12 +146,10 @@ static void __dead2 sp_system_reset(void)
 
 static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 {
-	unsigned long mpidr = read_mpidr_el1();
 
 	if (SP_CORE_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
 		return;
 
-	sp_platform_save_context(mpidr);
 	/* Prevent interrupts from spuriously waking up this cpu */
 	gicv2_cpuif_disable();
 
@@ -171,7 +157,6 @@ static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 static void sp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
 {
-	unsigned long mpidr = read_mpidr_el1();
 
 	if (is_local_state_off(SP_SYSTEM_PWR_STATE(target_state)))
 		gicv2_distif_init();
@@ -179,7 +164,7 @@ static void sp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
 		gicv2_pcpu_distif_init();
 		gicv2_cpuif_enable();
 	}
-	sp_platform_restore_context(mpidr);
+
 }
 
 /*******************************************************************************

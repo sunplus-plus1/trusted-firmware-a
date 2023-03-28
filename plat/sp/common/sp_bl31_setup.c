@@ -56,8 +56,9 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 #ifdef BL32_BASE
 	/* Populate entry point information for BL32 */
 	SET_PARAM_HEAD(&bl32_image_ep_info, PARAM_EP, VERSION_1, 0);
-	SET_SECURITY_STATE(bl32_image_ep_info.h.attr, SECURE);
+	bl32_image_ep_info.spsr = SPSR_64(MODE_EL1, MODE_SP_ELX, DISABLE_ALL_EXCEPTIONS);
 	bl32_image_ep_info.pc = BL32_BASE;
+	SET_SECURITY_STATE(bl32_image_ep_info.h.attr, SECURE);
 #endif
 	/* Populate entry point information for BL33 */
 	SET_PARAM_HEAD(&bl33_image_ep_info, PARAM_EP, VERSION_1, 0);
@@ -67,7 +68,6 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	 */
 
 	bl33_image_ep_info.spsr = SPSR_64(MODE_EL2, MODE_SP_ELX, DISABLE_ALL_EXCEPTIONS);
-
 	bl33_image_ep_info.pc = plat_get_ns_image_entrypoint();
 	bl33_image_ep_info.args.arg0 = SP_LINUX_DTB_OFFSET;
 	bl33_image_ep_info.args.arg1 = 0ULL;

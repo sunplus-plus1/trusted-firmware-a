@@ -28,6 +28,7 @@ CROSS     = ../../crossgcc/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin
 
 BL31_LADDR = 0x1fffc0
 BL31_RADDR = 0x200000
+BL32_BIN = ../../optee/optee_os/out/arm/core/tee-pager_v2.bin
 
 .PHONY: all init build install update clean distclean
 
@@ -51,12 +52,12 @@ build:
 	@echo "Build TFA"
 	$(RM) -f $(PRJ_OUTPUT_FILE)
 	$(MAKE) ${MAKE_JOBS} $(PRJ_EXT_PARA) -C $(PRJ_BUILD_ROOT) \
-		CROSS_COMPILE=$(CROSS) PLAT=$(CONFIG_GLB_GMNCFG_MODEL_TFA_CFG)  DEBUG=0 LOG_LEVEL=40 \
-		ENABLE_PMF=0 ARM_ETHOSN_NPU_DRIVER=1
+		CROSS_COMPILE=$(CROSS) PLAT=$(CONFIG_GLB_GMNCFG_MODEL_TFA_CFG) SPD=opteed DEBUG=0 LOG_LEVEL=40 \
+		ENABLE_PMF=0 ARM_ETHOSN_NPU_DRIVER=1 BL32=$(BL32_BIN) all fip 
 	@cd $(PRJ_BUILD_ROOT) ; \
-	 BL31_BIN=build/sp7350/release/bl31.bin ; \
-	 BL31_IMG=build/bl31.img ; \
-	 ./tools/add_uhdr.sh "BL31" $$BL31_BIN $$BL31_IMG $(BL31_LADDR) $(BL31_RADDR)
+	cp -f build/sp7350/release/bl31.bin build/bl31.bin ;\
+	cp -f build/sp7350/release/fip.bin build/fip.bin
+
 #	@$(PRJ_CHKBUILDRESULT)
 
 install:

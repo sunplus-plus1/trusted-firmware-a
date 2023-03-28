@@ -34,15 +34,17 @@
  *   uboot  @ 3MB
  */
 #define SP_DRAM_SEC_ADDR		(SP_DRAM_BASE)
-#define SP_DRAM_SEC_SIZE		(4U << 20)
+#define SP_DRAM_SEC_SIZE		(5U << 20)
 #define SP_DRAM_NS_ADDR			(SP_DRAM_SEC_ADDR + SP_DRAM_SEC_SIZE)
-#define SP_DRAM_NS_SIZE			((64U << 20) - SP_DRAM_NS_ADDR)
+#define SP_DRAM_NS_SIZE			(SP_DRAM_SIZE - SP_DRAM_NS_ADDR)
 
 #define BL31_BASE			0x200000 /* @ 2MB */
 #define BL31_LIMIT			(BL31_BASE + 0x100000)
 
+#define BL32_BASE				BL31_LIMIT
+#define BL32_LIMIT				(BL32_BASE + 0x200000)
 #define SP_LINUX_DTB_OFFSET		(SP_DRAM_BASE + 0x1F80000)  /* dtb @ 31M+512k */
-#define PLAT_SP_NS_IMAGE_OFFSET	(SP_DRAM_BASE + 0x300040) /* uboot @ 3MB+64 */
+#define PLAT_SP_NS_IMAGE_OFFSET	(SP_DRAM_BASE + 0x500040) /* uboot @ 5MB+64 */
 
 
 /* stack */
