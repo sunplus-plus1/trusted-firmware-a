@@ -19,6 +19,7 @@
 /* Memory-mapped devices */
 
 #define SP_RGST_BASE			0xf8000000
+#define SP_AO_RGST_BASE			0xf8800000 /* only for Q654 */
 #define SP_RGST_SIZE			0x03000000 /* to cover GIC 0xfaxx_xxxx */
 
 #define SP_UART0_BASE			0xf8000900
@@ -26,7 +27,7 @@
 #define SP_GICD_BASE			0xfa001000
 #define SP_GICC_BASE			0xfa002000
 
-#define SP_NPU_BASE				0xf8200000
+#define SP_NPU_BASE			0xf8200000
 
 /* macro */
 #define RF_GRP(_grp, _reg)           ((((_grp) * 32 + (_reg)) * 4) + SP_RGST_BASE)

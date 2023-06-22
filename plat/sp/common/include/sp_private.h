@@ -15,6 +15,7 @@ void sp_disable_secondary_cpus(u_register_t primary_mpidr);
 void sp_power_down(void);
 
 uint16_t sp_read_soc_id(void);
+uint16_t sp_read_soc_id2(void);
 
 void sp_console_setup(void);
 

@@ -33,7 +33,6 @@ unsigned int plat_get_syscnt_freq2(void)
 
 void sp_configure_mmu_el3(int flags)
 {
-	
 	mmap_add_region(BL31_BASE, BL31_BASE, (BL31_LIMIT - BL31_BASE),
 			MT_MEMORY | MT_RW | MT_SECURE);
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE, (BL_CODE_END - BL_CODE_BASE),
@@ -50,5 +49,11 @@ void sp_configure_mmu_el3(int flags)
 uint16_t sp_read_soc_id(void)
 {
 	uint32_t reg = mmio_read_32(SP_RGST_BASE);
+	return reg;
+}
+
+uint16_t sp_read_soc_id2(void)
+{
+	uint32_t reg = mmio_read_32(SP_AO_RGST_BASE);
 	return reg;
 }
