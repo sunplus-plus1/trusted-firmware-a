@@ -370,6 +370,7 @@ int psci_features(unsigned int psci_fid)
 	return PSCI_E_SUCCESS;
 }
 
+uint32_t smc_fid_save;
 /*******************************************************************************
  * PSCI top level handler for servicing SMCs.
  ******************************************************************************/
@@ -391,6 +392,7 @@ u_register_t psci_smc_handler(uint32_t smc_fid,
 	if ((psci_caps & define_psci_cap(smc_fid)) == 0U)
 		return (u_register_t)SMC_UNK;
 
+	smc_fid_save = smc_fid;
 	if (((smc_fid >> FUNCID_CC_SHIFT) & FUNCID_CC_MASK) == SMC_32) {
 		/* 32-bit PSCI function, clear top parameter bits */
 

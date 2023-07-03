@@ -22,9 +22,16 @@
 
 #include <sp_pm.h>
 
+extern uint64_t sp_sec_entry_point;
+
 #define SP_CORE_PWR_STATE(state) 	((state)->pwr_domain_state[MPIDR_AFFLVL0])
 #define SP_CLUSTER_PWR_STATE(state)	((state)->pwr_domain_state[MPIDR_AFFLVL1])
 #define SP_SYSTEM_PWR_STATE(state)	((state)->pwr_domain_state[PLAT_MAX_PWR_LVL])
+
+	/* save secure register,restore in warmboot xboot !! */
+
+
+
 
 static int sp_pwr_domain_on(u_register_t mpidr)
 {
@@ -42,13 +49,26 @@ static int sp_pwr_domain_on(u_register_t mpidr)
 	dsb();
 	isb();
 	sev();
+
 	return rc;
 }
+
+
+static void sp_pwr_domain_off(const psci_power_state_t *target_state)
+{
+	/* set core/cluster power down in CM4*/
+	assert(SP_CORE_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE);
+
+	gicv2_cpuif_disable();
+}
+
 static void sp_pwr_domain_on_finish(const psci_power_state_t *target_state)
 {
+
 	assert(target_state->pwr_domain_state[MPIDR_AFFLVL0] == PLAT_LOCAL_STATE_OFF);
 	gicv2_pcpu_distif_init();
 	gicv2_cpuif_enable();
+
 }
 void __dead2 plat_secondary_cold_boot_setup(void);
 
@@ -107,7 +127,6 @@ static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 	if (SP_CORE_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
 		return;
-	
 
 	/* Prevent interrupts from spuriously waking up this cpu */
 	gicv2_cpuif_disable();
@@ -117,7 +136,6 @@ static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 static void sp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
 {
 
-	
 	if (is_local_state_off(SP_SYSTEM_PWR_STATE(target_state)))
 		gicv2_distif_init();
 	if (is_local_state_off(SP_CORE_PWR_STATE(target_state))) {
@@ -156,15 +174,6 @@ static void sp_cpu_standby(plat_local_state_t cpu_state)
 }
 
 
-static void sp_pwr_domain_off(const psci_power_state_t *target_state)
-{
-
-	/* set core/cluster power down in CM4*/
-	assert(SP_CORE_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE);
-	
-	gicv2_cpuif_disable();
-}
-
 void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 {
 
@@ -175,7 +184,7 @@ void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 {
 	/* only used in cpu suspend mode  !!!
 	   "echo mem > /sys/power/state" will not in here
-	   pstate: cpu in standby/powerdown mode.  
+	   pstate: cpu in standby/powerdown mode.
 	   standby set retation, powerdown set off mode.
 	*/
 	int pstate = psci_get_pstate_type(power_state);
@@ -183,7 +192,7 @@ void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 	int i;
 
 	assert(req_state);
-	
+
 	if (pwr_lvl > PLAT_MAX_PWR_LVL)
 		return PSCI_E_INVALID_PARAMS;
 
@@ -194,7 +203,7 @@ void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 		 */
 		if (pwr_lvl != MPIDR_AFFLVL0)
 			return PSCI_E_INVALID_PARAMS;
-	
+
 		req_state->pwr_domain_state[MPIDR_AFFLVL0] = PLAT_LOCAL_STATE_RET;
 	} else {
 		for (i = MPIDR_AFFLVL0; i <= pwr_lvl; i++)
@@ -213,10 +222,10 @@ void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 static int32_t sp_validate_ns_entrypoint(uintptr_t entrypoint)
 {
 
-   if ((entrypoint > SP_DRAM_BASE) && (entrypoint < (SP_DRAM_BASE + SP_DRAM_SIZE)))
+	if ((entrypoint > SP_DRAM_BASE) && (entrypoint < (SP_DRAM_BASE + SP_DRAM_SIZE)))
 	   return PSCI_E_SUCCESS;
 
-   return PSCI_E_INVALID_ADDRESS;
+	return PSCI_E_INVALID_ADDRESS;
 }
 
 static plat_psci_ops_t sp_psci_ops = {
@@ -235,7 +244,6 @@ static plat_psci_ops_t sp_psci_ops = {
 	.pwr_domain_pwr_down_wfi	= sp_pwr_down_wfi,
 };
 
-extern uint64_t sp_sec_entry_point;
 
 int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 			const plat_psci_ops_t **psci_ops)

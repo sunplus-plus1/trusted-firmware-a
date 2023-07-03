@@ -40,6 +40,7 @@ static int sp_pwr_domain_on(u_register_t mpidr)
 	uintptr_t hold_base = PLAT_SP_HOLD_BASE;
 
 	assert(pos < PLATFORM_CORE_COUNT);
+
 	hold_base -= pos * 8;
 	mmio_write_64(hold_base, PLAT_SP_HOLD_STATE_GO);
 	/* No cache maintenance here, hold_base is mapped as device memory. */
@@ -77,6 +78,8 @@ static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 	sp_cpu_off(read_mpidr());
 
 	dcsw_op_all(DCCISW); //flush cache
+	extern uint32_t smc_fid_save;
+	if (smc_fid_save == PSCI_CPU_OFF) plat_secondary_cold_boot_setup();
 
 	if (pos == 0)
 	{
@@ -204,10 +207,14 @@ void sp_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
  int32_t sp_validate_power_state(uint32_t power_state,
 				   psci_power_state_t *req_state)
 {
-
-	int i;
+	/* only used in cpu suspend mode  !!!
+	   "echo mem > /sys/power/state" will not in here
+	   pstate: cpu in standby/powerdown mode.
+	   standby set retation, powerdown set off mode.
+	*/
 	int pstate = psci_get_pstate_type(power_state);
 	int pwr_lvl = psci_get_pstate_pwrlvl(power_state);
+	int i;
 
 	assert(req_state);
 
@@ -247,17 +254,17 @@ static int32_t sp_validate_ns_entrypoint(uintptr_t entrypoint)
 }
 
 static plat_psci_ops_t sp_psci_ops = {
-	.cpu_standby			    = sp_cpu_standby,
-	.pwr_domain_on			    = sp_pwr_domain_on,
-	.pwr_domain_off			    = sp_pwr_domain_off,
-	.pwr_domain_suspend		    = sp_pwr_domain_suspend,
+	.cpu_standby			= sp_cpu_standby,
+	.pwr_domain_on			= sp_pwr_domain_on,
+	.pwr_domain_off			= sp_pwr_domain_off,
+	.pwr_domain_suspend		= sp_pwr_domain_suspend,
 	.pwr_domain_suspend_finish	= sp_pwr_domain_suspend_finish,
 	.validate_power_state		= sp_validate_power_state,
 	.validate_ns_entrypoint		= sp_validate_ns_entrypoint,
 	.get_sys_suspend_power_state	= sp_get_sys_suspend_power_state,
 
-	.system_off			        = sp_system_off,
-	.system_reset			    = sp_system_reset,
+	.system_off			= sp_system_off,
+	.system_reset			= sp_system_reset,
 	.pwr_domain_on_finish		= sp_pwr_domain_on_finish,
 	.pwr_domain_pwr_down_wfi	= sp_pwr_down_wfi,
 };
