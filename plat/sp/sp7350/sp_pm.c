@@ -74,12 +74,12 @@ void __dead2 plat_secondary_cold_boot_setup(void);
 
 static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 {
-	unsigned int pos = plat_my_core_pos();
-	sp_cpu_off(read_mpidr());
-
 	dcsw_op_all(DCCISW); //flush cache
 	extern uint32_t smc_fid_save;
 	if (smc_fid_save == PSCI_CPU_OFF) plat_secondary_cold_boot_setup();
+
+	unsigned int pos = plat_my_core_pos();
+	sp_cpu_off(read_mpidr());
 
 	if (pos == 0)
 	{
