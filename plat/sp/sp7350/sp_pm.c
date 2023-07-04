@@ -28,10 +28,26 @@ extern uint64_t sp_sec_entry_point;
 #define SP_CLUSTER_PWR_STATE(state)	((state)->pwr_domain_state[MPIDR_AFFLVL1])
 #define SP_SYSTEM_PWR_STATE(state)	((state)->pwr_domain_state[PLAT_MAX_PWR_LVL])
 
+#define PM_DATA_SAVE_ADDRESS   0xFA29E000   /* Save the maindomain register and User data */
+
+#define RGST_SECURE_REG       RF_GRP(502,0)
+#define SECGRP1_MAIN_REG      RF_GRP(113,0)
+
+static void sp_platform_save_context(void)
+{
+	uint8_t *save_data = (uint8_t *)PM_DATA_SAVE_ADDRESS;
+
 	/* save secure register,restore in warmboot xboot !! */
+	memcpy((void *)save_data,(void *)RGST_SECURE_REG, sizeof(uint32_t) * 32);
+	save_data += sizeof(uint32_t) * 32;
 
+	memcpy((void *)save_data, (void *)SECGRP1_MAIN_REG,sizeof(uint32_t) * 3 * 32); //G113.G114.G115
+	save_data += sizeof(uint32_t) * 3 * 32;
 
+	memcpy((void *)save_data,(void *)CORE_CPU_START_POS(3), (CORE_CPU_START_POS(0)-CORE_CPU_START_POS(3)));
+	save_data += (CORE_CPU_START_POS(0)-CORE_CPU_START_POS(3));
 
+}
 
 static int sp_pwr_domain_on(u_register_t mpidr)
 {
@@ -152,6 +168,7 @@ static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 	if (SP_CORE_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
 		return;
+	sp_platform_save_context();
 
 	/* Prevent interrupts from spuriously waking up this cpu */
 	gicv2_cpuif_disable();
