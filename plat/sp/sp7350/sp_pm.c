@@ -54,7 +54,6 @@ static int sp_pwr_domain_on(u_register_t mpidr)
 	int rc = PSCI_E_SUCCESS;
 	unsigned int pos = plat_core_pos_by_mpidr(mpidr);
 	uintptr_t hold_base = PLAT_SP_HOLD_BASE;
-
 	assert(pos < PLATFORM_CORE_COUNT);
 
 	hold_base -= pos * 8;
@@ -91,32 +90,37 @@ void __dead2 plat_secondary_cold_boot_setup(void);
 static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 {
 	dcsw_op_all(DCCISW); //flush cache
-	extern uint32_t smc_fid_save;
-	if (smc_fid_save == PSCI_CPU_OFF) plat_secondary_cold_boot_setup();
 
-	unsigned int pos = plat_my_core_pos();
-	sp_cpu_off(read_mpidr());
-
-	if (pos == 0)
+	/* cpu off flow, detemine by system power state */
+	if (SP_SYSTEM_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
 	{
-		/* for suspend to ram: all of core wfi here, then send msg to CM4 to power down main domain */
-		/* for others: core0 should off/reset other core */
-		send_upf_msg_to_cm4();
+		plat_secondary_cold_boot_setup();
 	}
-
-	//write_rmr_el3(RMR_EL3_RR_BIT | RMR_EL3_AA64_BIT); //for warm reset test
-
-	dsb();
-	asm volatile ("msr S3_0_C15_C2_7 ,%0" :: "r" (0x1));
-	isb();
-
-	while (1)
+	else
 	{
-		asm volatile ("wfi");
+		unsigned int pos = plat_my_core_pos();
+		sp_cpu_off(read_mpidr());
+
+		if (pos == 0)
+		{
+			/* for suspend to ram: all of core wfi here, then send msg to CM4 to power down main domain */
+			/* for others: core0 should off/reset other core */
+			send_upf_msg_to_cm4();
+		}
+
+		//write_rmr_el3(RMR_EL3_RR_BIT | RMR_EL3_AA64_BIT); //for warm reset test
+
+		dsb();
+		asm volatile ("msr S3_0_C15_C2_7 ,%0" :: "r" (0x1));
+		isb();
+
+		while (1)
+		{
+			asm volatile ("wfi");
+		}
+
+		panic();
 	}
-
-	panic();
-
 }
 
 static void __dead2 sp_system_off(void)
