@@ -105,19 +105,18 @@ static void __dead2 sp_pwr_down_wfi(const psci_power_state_t *target_state)
 		{
 			/* for suspend to ram: all of core wfi here, then send msg to CM4 to power down main domain */
 			/* for others: core0 should off/reset other core */
-			send_upf_msg_to_cm4();
+			send_upf_msg_to_cm4();// CM4 will determine whether to turn off the power
 		}
-
-		//write_rmr_el3(RMR_EL3_RR_BIT | RMR_EL3_AA64_BIT); //for warm reset test
 
 		dsb();
 		asm volatile ("msr S3_0_C15_C2_7 ,%0" :: "r" (0x1));
 		isb();
 
-		while (1)
-		{
-			asm volatile ("wfi");
-		}
+		asm volatile ("wfi");
+
+		// for deep sleep warmboot, not power down maindomain
+		write_scr_el3(read_scr_el3() & ~SCR_IRQ_BIT);
+		write_rmr_el3(RMR_EL3_RR_BIT | RMR_EL3_AA64_BIT); //for warm reset test
 
 		panic();
 	}
@@ -169,14 +168,14 @@ static void __dead2 sp_system_reset(void)
 
 static void sp_pwr_domain_suspend(const psci_power_state_t *target_state)
 {
+	if (is_local_state_off(SP_SYSTEM_PWR_STATE(target_state)))
+	{
+		sp_platform_save_context();
 
-	if (SP_CORE_PWR_STATE(target_state) != PLAT_MAX_OFF_STATE)
-		return;
-	sp_platform_save_context();
-
-	/* Prevent interrupts from spuriously waking up this cpu */
-	gicv2_cpuif_disable();
-
+		dsb();
+		write_scr_el3(read_scr_el3() | SCR_IRQ_BIT);
+		isb();
+	}
 }
 
 static void sp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
