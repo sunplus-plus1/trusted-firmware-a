@@ -12,7 +12,6 @@
 #define SP_UART0_BAUDRATE		115200
 #define SP_UART0_CLK_IN_HZ		(216 * 1000 * 1000)
 
-#define SP_Q645				0x00006450 /* G0.0 (0xf8000000) */
-#define SP_Q654				0x00000a30 /* G0.0 (0xf8800000) */
+#define SP_7350				0x00000a30 /* G0.0 (0xf8800000) */
 
 #endif /* SP_DEF_H */

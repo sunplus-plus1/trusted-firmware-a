@@ -87,16 +87,11 @@ void bl31_platform_setup(void)
 	uint32_t soc_id;
 	const char *soc_name;
 
-	soc_id = sp_read_soc_id();
-	if (soc_id == SP_Q645) {
-		soc_name = "Q645";
-	} else {
-		soc_id = sp_read_soc_id2();
-		if (soc_id == SP_Q654)
-			soc_name = "Q654";
-		else
-			soc_name = "Unknown";
-	}
+	soc_id = sp_read_soc_id2();
+	if (soc_id == SP_7350)
+		soc_name = "SP7350";
+	else
+		soc_name = "Unknown";
 
 	NOTICE("BL31: Detected %s SoC (%04x)\n", soc_name, soc_id);
 
