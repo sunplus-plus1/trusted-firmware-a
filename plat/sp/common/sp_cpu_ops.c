@@ -27,3 +27,9 @@ void send_upf_msg_to_cm4(void)
 {
 	mmio_write_32(SP_MAILBOX_CA55_TO_M4_IRQ0, 0x1234abcd);
 }
+
+void send_powerdown_msg_to_cm4(void)
+{
+	mmio_write_32(SP_MAILBOX_CA55_TO_M4_IRQ0, 0x12348765);
+}
+

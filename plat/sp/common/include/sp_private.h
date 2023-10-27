@@ -20,5 +20,6 @@ uint16_t sp_read_soc_id2(void);
 void sp_console_setup(void);
 
 void send_upf_msg_to_cm4(void);
+void send_powerdown_msg_to_cm4(void);
 
 #endif /* SP_PRIVATE_H */

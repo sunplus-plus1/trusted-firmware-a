@@ -130,6 +130,7 @@ static void __dead2 sp_system_off(void)
 
 	/* Turn off all secondary CPUs */
 	sp_disable_secondary_cpus(read_mpidr());
+	send_powerdown_msg_to_cm4();
 
 	NOTICE("%s: halt\n", __func__);
 
