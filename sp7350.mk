@@ -11,7 +11,7 @@ CONFIG_GLB_GMNCFG_MODEL_TFA_CFG = "sp7350"
 ECHO = echo
 MAKE_JOBS = -j 30 -l 24
 
-
+GIT_COMMIT_FILE = tempfile
 
 ###################################
 #  Define this project parameter  #
@@ -47,18 +47,22 @@ init:
 	@$(MAKE) $(PRJ_EXT_PARA) -C $(PRJ_BUILD_ROOT) \
 		CROSS_COMPILE=$(CROSS) PLAT=$(CONFIG_GLB_GMNCFG_MODEL_TFA_CFG) DEBUG=0 clean
 
-build:
+build: get_commit
 #	@$(PRJ_SHOWBUILDMESG)
 	@echo "Build TFA"
 	$(RM) -f $(PRJ_OUTPUT_FILE)
 	$(MAKE) ${MAKE_JOBS} $(PRJ_EXT_PARA) -C $(PRJ_BUILD_ROOT) \
-		BUILD_STRING=sp7350_master CROSS_COMPILE=$(CROSS) PLAT=$(CONFIG_GLB_GMNCFG_MODEL_TFA_CFG) SPD=opteed DEBUG=0 LOG_LEVEL=40 \
+		BUILD_STRING=$(shell cat $(PRJ_BUILD_ROOT)/$(GIT_COMMIT_FILE)) CROSS_COMPILE=$(CROSS) PLAT=$(CONFIG_GLB_GMNCFG_MODEL_TFA_CFG) SPD=opteed DEBUG=0 LOG_LEVEL=40 \
 		ENABLE_PMF=0 ARM_ETHOSN_NPU_DRIVER=1 BL32=$(BL32_BIN) all fip 
 	@cd $(PRJ_BUILD_ROOT) ; \
 	cp -f build/sp7350/release/bl31.bin build/bl31.bin ;\
-	cp -f build/sp7350/release/fip.bin build/fip.bin
+	cp -f build/sp7350/release/fip.bin build/fip.bin;\
+	rm -rf $(GIT_COMMIT_FILE)
 
 #	@$(PRJ_CHKBUILDRESULT)
+
+get_commit:
+	@cd $(PRJ_BUILD_ROOT) ; git rev-parse --short HEAD > $(GIT_COMMIT_FILE)
 
 install:
 	@:
