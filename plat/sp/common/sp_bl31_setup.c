@@ -88,7 +88,7 @@ void bl31_platform_setup(void)
 	const char *soc_name;
 
 	soc_id = sp_read_soc_id2();
-	if (soc_id == SP_7350)
+	if ((soc_id == SP_7350A) || (soc_id == SP_7350B))
 		soc_name = "SP7350";
 	else
 		soc_name = "Unknown";
