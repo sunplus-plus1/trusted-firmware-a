@@ -24,7 +24,7 @@ TARGET_OUTPUT_FILE     = $(GEMINI_BL31_IMAGE)
 TARGET_OUTPUT_DEL_FILE = $(TARGET_OUTPUT_FILE)
 PRJ_EXT_PARA           =
 
-CROSS     = ../../crossgcc/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
+CROSS     = $(TOOLCHAIN_AARCH64_PATH)/bin/$(TOOLCHAIN_AARCH64_PREFIX)-
 
 BL31_LADDR = 0x1fffc0
 BL31_RADDR = 0x200000

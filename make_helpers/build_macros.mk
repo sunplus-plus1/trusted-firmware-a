@@ -80,6 +80,8 @@ $(foreach d,$(0-9),$(eval __numeric := $(subst $(d),,$(__numeric))))
 $(if $(__numeric),$(error $(1) must be numeric))
 endef
 
+ld_option = $(shell $(LD) $(1) -Wl,--version >/dev/null 2>&1 || $(LD) $(1) -v >/dev/null 2>&1 && echo $(1))
+
 # Convenience function for verifying options have numeric values
 # $(eval $(call assert_numerics,FOO BOO)) will assert FOO and BOO contain numeric values
 define assert_numerics

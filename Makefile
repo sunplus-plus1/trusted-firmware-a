@@ -368,6 +368,8 @@ endif
 
 GCC_V_OUTPUT		:=	$(shell $(CC) -v 2>&1)
 
+TF_LDFLAGS		:=	-z noexecstack
+
 # LD = armlink
 ifneq ($(findstring armlink,$(notdir $(LD))),)
 TF_LDFLAGS		+=	--diag_error=warning --lto_level=O1
@@ -377,6 +379,7 @@ TF_LDFLAGS		+=	$(TF_LDFLAGS_$(ARCH))
 # LD = gcc (used when GCC LTO is enabled)
 else ifneq ($(findstring gcc,$(notdir $(LD))),)
 # Pass ld options with Wl or Xlinker switches
+TF_LDFLAGS		+=	$(call ld_option,-xlinker,--no-warn-rwx-segments)
 TF_LDFLAGS		+=	-Wl,--fatal-warnings -O1
 TF_LDFLAGS		+=	-Wl,--gc-sections
 ifeq ($(ENABLE_LTO),1)
@@ -394,6 +397,9 @@ TF_LDFLAGS		+=	$(subst --,-Xlinker --,$(TF_LDFLAGS_$(ARCH)))
 
 # LD = gcc-ld (ld) or llvm-ld (ld.lld) or other
 else
+# with ld.bfd version 2.39 and newer new warnings are addedd. skip those since we
+# are not loaded by a elf loader.
+TF_LDFLAGS		+=	$(call ld_option,--no-warn-rwx-segments)
 TF_LDFLAGS		+=	--fatal-warnings -O1
 TF_LDFLAGS		+=	--gc-sections
 # ld.lld doesn't recognize the errata flags,
