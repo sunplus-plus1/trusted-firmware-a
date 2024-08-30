@@ -154,6 +154,9 @@ static uintptr_t std_svc_smc_handler(uint32_t smc_fid,
 	case ARM_STD_SVC_VERSION:
 		/* Return the version of current implementation */
 		SMC_RET2(handle, STD_SVC_VERSION_MAJOR, STD_SVC_VERSION_MINOR);
+	
+	case 0x84000050: // ARM_SMCCC_TRNG_VERSION, ret -1: not available
+		SMC_RET1(handle, -1);
 
 	default:
 		WARN("Unimplemented Standard Service Call: 0x%x \n", smc_fid);
