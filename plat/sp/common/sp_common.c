@@ -57,3 +57,39 @@ uint16_t sp_read_soc_id2(void)
 	uint32_t reg = mmio_read_32(SP_AO_RGST_BASE);
 	return reg;
 }
+
+#include <lib/smccc.h>
+#include <services/arm_arch_svc.h>
+/* https://www.jedec.org/system/files/docs/JEP106BJ.01.pdf */
+#define JEDEC_SUNPLUS_BKID U(13)
+#define JEDEC_SUNPLUS_MFID U(0xc8)
+
+/*****************************************************************************
+ * plat_is_smccc_feature_available() - This function checks whether SMCCC
+ *                                     feature is availabile for platform.
+ * @fid: SMCCC function id
+ *
+ * Return SMC_OK if SMCCC feature is available and SMC_ARCH_CALL_NOT_SUPPORTED
+ * otherwise.
+ *****************************************************************************/
+int32_t plat_is_smccc_feature_available(u_register_t fid)
+{
+	switch (fid) {
+	case SMCCC_ARCH_SOC_ID:
+		return SMC_ARCH_CALL_SUCCESS;
+	default:
+		return SMC_ARCH_CALL_NOT_SUPPORTED;
+	}
+}
+
+int32_t plat_get_soc_version(void)
+{
+	uint32_t manfid = (JEDEC_SUNPLUS_BKID << 24U) | (JEDEC_SUNPLUS_MFID << 16U);
+
+	return (int32_t)(manfid | (sp_read_soc_id2() & 0xFFFFU));
+}
+
+int32_t plat_get_soc_revision(void)
+{
+	return 0;
+}
